@@ -1,22 +1,31 @@
 <html>
 <head>
 <style>
- div { border: 1px }
- .div-table {
- 	display: table;
- }
- .div-row {
- 	display: table-row;
- }
+	.div-table {
+		display: table;
+		border: 1px solid black;
+		border-bottom:0;
+		border-right:0;
+	}
+	.div-row {
+		display: table-row;
+	}
 
- .div-row > div {
- 	display: table-cell;
- 	border: 1px solid black;
- 	width: 30px;
- 	height: 30px;
- 	text-align: center;
- 	vertical-align: middle;
- }
+	.div-row > div {
+		display: table-cell;
+		border: 1px solid black;
+		border-top:0;
+		border-left:0;
+		width: 30px;
+		height: 30px;
+		text-align: center;
+		vertical-align: middle;
+		cursor: pointer;
+	}
+
+	.div-row > div.active {
+		background-color: aquamarine;
+	}
 </style>
 <script>
 var game = function( cols, rows, elements ) {
@@ -97,6 +106,24 @@ var game = function( cols, rows, elements ) {
 	me.init();
 };
 
+var cellView = {
+	getCellId: function( x, y ) {
+		return 'c_' + x + '_' + y;
+	},
+	getCell: function( x, y )
+	{
+		return document.getElementById( this.getCellId( x, y ) );
+	},
+	setActive: function( x, y ) {
+		var cell = this.getCell( x, y );
+		cell.className = 'active';
+	},
+	unsetActive: function( x, y ) {
+		var cell = this.getCell( x, y );
+		cell.className = '';
+	}
+};
+
 var gameView = function( game ) {
 	var me = this;
 	me.activeCell = null;
@@ -108,6 +135,7 @@ var gameView = function( game ) {
 			row_div.className = "div-row";
 			for( var x=0; x<game.cols; x++ ) {
 				var cell = document.createElement( 'div' );
+				cell.id = cellView.getCellId( x, y );
 				cell.innerHTML = game.table[y][x];
 				(function( cell_x, cell_y ){
 					cell.addEventListener( 'click', function(event) { return me.cellClick( cell_x, cell_y, event ) } );
@@ -119,20 +147,33 @@ var gameView = function( game ) {
 		document.body.appendChild( me.gameField );
 	};
 
+	me.setActiveCell = function( x, y ) {
+		console.log( 'select ' + x + ' ' + y );
+		cellView.setActive( x, y );
+		me.activeCell = { x: x, y: y };
+
+	};
+
+	me.unsetActiveCell = function() {
+		console.log( 'unselect' );
+		if( me.activeCell !== null ) {
+			cellView.unsetActive( me.activeCell.x, me.activeCell.y );
+			me.activeCell = null;
+		}
+	};
+
+
 	me.cellClick = function( x, y, event){
 		if( me.activeCell == null ){
-			console.log( 'select ' + x + ' ' + y );
-			me.activeCell = { x: x, y: y };
+			me.setActiveCell( x, y );
 		} else if( me.activeCell.x != undefined && me.activeCell.y != undefined ) {
 			if( me.activeCell.x == x && me.activeCell.y == y ) {
-				me.activeCell = null;
-				console.log( 'unselect' );
+				me.unsetActiveCell();
 			} else if( ( ( me.activeCell.x-1 == x || me.activeCell.x+1 == x ) && ( me.activeCell.y == y ) ) || ( ( me.activeCell.x == x ) && ( me.activeCell.y-1 == y || me.activeCell.y+1 == y ) ) ) {
 				console.log( 'check collision' );
 			} else {
-				console.log( 'unselect' );
-				console.log( 'select ' + x + ' ' + y );
-				me.activeCell = { x: x, y: y };
+				me.unsetActiveCell();
+				me.setActiveCell( x, y );
 			}
 		}
 	};
