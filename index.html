@@ -1,0 +1,174 @@
+<html>
+<head>
+<style>
+ div { border: 1px }
+ .div-table {
+ 	display: table;
+ }
+ .div-row {
+ 	display: table-row;
+ }
+
+ .div-row > div {
+ 	display: table-cell;
+ 	border: 1px solid black;
+ 	width: 30px;
+ 	height: 30px;
+ 	text-align: center;
+ 	vertical-align: middle;
+ }
+</style>
+<script>
+var game = function( cols, rows, elements ) {
+	var me = this;
+	me.cols = cols;
+	me.rows = rows;
+	me.elements = elements;
+	me.table = [];
+	me.collisions = [];
+
+	me.initTable = function() {
+		for( var y=0; y<me.rows; y++ ) {
+			var line = [];
+			for( var x=0; x<me.cols; x++ ) {
+				line.push(rand( 1, elements ));
+			}
+			me.table.push(line);
+		}
+	};
+
+	me.markCollisions = function() {
+		var collisions = [];
+		var addCollision = function( x, y ) {
+			var key = x+'_'+y;
+			if( !collisions[key] ) {
+				collisions[key] = true;
+				me.collisions.push( { x: x, y: y } )
+			}
+		};
+		me.collisions = [];
+
+		for( var x=0; x<me.cols; x++ ) {
+			for( var y=0; y<me.rows; y++ ) {
+				if( x > 0 && x < me.cols-1 && me.table[y][x] == me.table[y][x-1] && me.table[y][x] == me.table[y][x+1] ) {
+					addCollision( x, y );
+					addCollision( x-1, y );
+					addCollision( x+1, y );
+				}
+				if( y > 0 && y < me.rows-1 && me.table[y][x] == me.table[y-1][x] && me.table[y][x] == me.table[y+1][x] ) {
+					addCollision( x, y );
+					addCollision( x, y-1 );
+					addCollision( x, y+1 );
+				}
+			}
+		}
+		for( var key in me.collisions ) {
+			var cell = me.collisions[key];
+			me.table[cell.y][cell.x] = 0;
+		}
+
+
+	};
+
+	me.moveCollisions = function() {
+		while( me.collisions.length ) {
+			var collision = me.collisions.pop();
+			if( !me.table[collision.y][collision.x] ) {
+				for( var x=0; x<me.cols; x++ ) {
+					if( !me.table[collision.y][x] ) {
+						me.table[collision.y].splice( x, 1);
+						me.table[collision.y].push( rand( 1, elements ) );
+						x--;
+					}
+				}
+			}
+		}
+	};
+
+	me.init = function() {
+		me.initTable();
+		while( true ) {
+			me.markCollisions();
+			if( me.collisions.length == 0 ) break;
+			me.moveCollisions();
+		}
+		me.view = new gameView(me);
+	};
+	me.init();
+};
+
+var gameView = function( game ) {
+	var me = this;
+	me.activeCell = null;
+	me.init = function() {
+		me.gameField = document.createElement( 'div' );
+		me.gameField.className = "div-table";
+		for( var y=0; y<game.rows; y++ ) {
+			var row_div = document.createElement( 'div' );
+			row_div.className = "div-row";
+			for( var x=0; x<game.cols; x++ ) {
+				var cell = document.createElement( 'div' );
+				cell.innerHTML = game.table[y][x];
+				(function( cell_x, cell_y ){
+					cell.addEventListener( 'click', function(event) { return me.cellClick( cell_x, cell_y, event ) } );
+				}(x,y));
+				row_div.appendChild( cell );
+			}
+			me.gameField.appendChild( row_div );
+		}
+		document.body.appendChild( me.gameField );
+	};
+
+	me.cellClick = function( x, y, event){
+		if( me.activeCell == null ){
+			console.log( 'select ' + x + ' ' + y );
+			me.activeCell = { x: x, y: y };
+		} else if( me.activeCell.x != undefined && me.activeCell.y != undefined ) {
+			if( me.activeCell.x == x && me.activeCell.y == y ) {
+				me.activeCell = null;
+				console.log( 'unselect' );
+			} else if( ( ( me.activeCell.x-1 == x || me.activeCell.x+1 == x ) && ( me.activeCell.y == y ) ) || ( ( me.activeCell.x == x ) && ( me.activeCell.y-1 == y || me.activeCell.y+1 == y ) ) ) {
+				console.log( 'check collision' );
+			} else {
+				console.log( 'unselect' );
+				console.log( 'select ' + x + ' ' + y );
+				me.activeCell = { x: x, y: y };
+			}
+		}
+	};
+
+	me.update = function() {
+		for( var x=0; x<game.cols; x++ ) {
+			for( var y=0; y<game.rows; y++ ) {
+				me.gameField.children[y].children[x].innerHTML = game.table[y][x];
+			}
+		}
+	};
+
+
+	me.init();
+};
+
+
+var rand = function(min, max) {
+	var argc = arguments.length;
+	if (argc === 0) {
+		min = 0;
+		max = 2147483647;
+	} else if (argc === 1) {
+		throw new Error('Warning: rand() expects exactly 2 parameters, 1 given');
+	}
+	return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+</script>
+</head>
+<body>
+
+<script>
+	var gameObj = new game( 7, 3, 3 );
+</script>
+<button onclick="gameObj.markCollisions();gameObj.view.update()">check</button>
+<button onclick="gameObj.moveCollisions();gameObj.view.update()">move</button>
+
+</body>
+</html>
