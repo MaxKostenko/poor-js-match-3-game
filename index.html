@@ -30,6 +30,7 @@
 <script>
 var game = function( cols, rows, elements ) {
 	var me = this;
+	me.debug = false;
 	me.cols = cols;
 	me.rows = rows;
 	me.elements = elements;
@@ -46,6 +47,22 @@ var game = function( cols, rows, elements ) {
 		}
 	};
 
+	me.hasVerticalCollision = function( x, y ) {
+		for( var sigmaY = y-2; sigmaY<=y; sigmaY++ ) {
+			if( sigmaY >= 0 && sigmaY < me.rows-2 && me.table[sigmaY][x] == me.table[sigmaY+1][x] && me.table[sigmaY][x] == me.table[sigmaY+2][x] )
+				return true;
+		}
+		return false
+	};
+
+	me.hasHorizontalCollision = function( x, y ) {
+		for( var sigmaX = x-2; sigmaX<=x; sigmaX++ ) {
+			if( sigmaX >= 0 && sigmaX < me.cols-2 && me.table[y][sigmaX] == me.table[y][sigmaX+1] && me.table[y][sigmaX] == me.table[y][sigmaX+2] )
+				return true;
+		}
+		return false
+	};
+
 	me.markCollisions = function() {
 		var collisions = [];
 		var addCollision = function( x, y ) {
@@ -59,15 +76,8 @@ var game = function( cols, rows, elements ) {
 
 		for( var x=0; x<me.cols; x++ ) {
 			for( var y=0; y<me.rows; y++ ) {
-				if( x > 0 && x < me.cols-1 && me.table[y][x] == me.table[y][x-1] && me.table[y][x] == me.table[y][x+1] ) {
+				if( me.hasVerticalCollision( x, y ) || me.hasHorizontalCollision( x, y ) ) {
 					addCollision( x, y );
-					addCollision( x-1, y );
-					addCollision( x+1, y );
-				}
-				if( y > 0 && y < me.rows-1 && me.table[y][x] == me.table[y-1][x] && me.table[y][x] == me.table[y+1][x] ) {
-					addCollision( x, y );
-					addCollision( x, y-1 );
-					addCollision( x, y+1 );
 				}
 			}
 		}
@@ -96,10 +106,12 @@ var game = function( cols, rows, elements ) {
 
 	me.init = function() {
 		me.initTable();
-		while( true ) {
-			me.markCollisions();
-			if( me.collisions.length == 0 ) break;
-			me.moveCollisions();
+		if( me.debug ) {
+			while( true ) {
+				me.markCollisions();
+				if( me.collisions.length == 0 ) break;
+				me.moveCollisions();
+			}
 		}
 		me.view = new gameView(me);
 	};
@@ -162,6 +174,11 @@ var gameView = function( game ) {
 		}
 	};
 
+	me.isSwitchableCell = function( x, y ) {
+		return 	( ( me.activeCell.y == y ) && ( me.activeCell.x-1 == x || me.activeCell.x+1 == x ) ) ||
+				( ( me.activeCell.x == x ) && ( me.activeCell.y-1 == y || me.activeCell.y+1 == y ) )
+	};
+
 
 	me.cellClick = function( x, y, event){
 		if( me.activeCell == null ){
@@ -169,7 +186,11 @@ var gameView = function( game ) {
 		} else if( me.activeCell.x != undefined && me.activeCell.y != undefined ) {
 			if( me.activeCell.x == x && me.activeCell.y == y ) {
 				me.unsetActiveCell();
-			} else if( ( ( me.activeCell.x-1 == x || me.activeCell.x+1 == x ) && ( me.activeCell.y == y ) ) || ( ( me.activeCell.x == x ) && ( me.activeCell.y-1 == y || me.activeCell.y+1 == y ) ) ) {
+			} else if( me.isSwitchableCell( x, y ) ) {
+			/*Before checking we should switch elements
+				if( game.hasHorizontalCollision( x, y ) || game.hasVerticalCollision( x, y ) ) {
+
+				}*/
 				console.log( 'check collision' );
 			} else {
 				me.unsetActiveCell();
