@@ -30,7 +30,7 @@
 <script>
 var game = function( cols, rows, elements ) {
 	var me = this;
-	me.debug = false;
+	me.debug = true;
 	me.cols = cols;
 	me.rows = rows;
 	me.elements = elements;
@@ -45,20 +45,60 @@ var game = function( cols, rows, elements ) {
 			}
 			me.table.push(line);
 		}
+/*
+		me.table = [
+			[1,1,1,3,2,1,3],
+			[1,3,3,3,2,3,3],
+			[2,1,1,2,3,3,3]
+		];
+/
+		me.table = [
+			[2,3,2,1,2,1,2],
+			[2,2,1,3,3,1,3],
+			[2,2,2,2,2,2,2]
+		];
+		/**/
 	};
 
 	me.hasVerticalCollision = function( x, y ) {
-		for( var sigmaY = y-2; sigmaY<=y; sigmaY++ ) {
-			if( sigmaY >= 0 && sigmaY < me.rows-2 && me.table[sigmaY][x] == me.table[sigmaY+1][x] && me.table[sigmaY][x] == me.table[sigmaY+2][x] )
+		return me.hasVerticalCollisionWith( x, y, me.table[y][x] );
+	};
+
+	me.hasVerticalCollisionWith = function( x, y, value ) {
+		var count = 0;
+		var sigmaY = y > 2 ? y-2 : 0;
+		var maxY = y+2 >= me.rows ? me.rows-1 : y+2;
+		for( sigmaY; sigmaY<=maxY; sigmaY++ ) {
+			if( ( me.table[sigmaY][x] == value ) || ( sigmaY === y ) ) {
+				count++
+			} else {
+				count = 0;
+			}
+			if( count === 3 ) {
 				return true;
+			}
 		}
 		return false
 	};
 
+
 	me.hasHorizontalCollision = function( x, y ) {
-		for( var sigmaX = x-2; sigmaX<=x; sigmaX++ ) {
-			if( sigmaX >= 0 && sigmaX < me.cols-2 && me.table[y][sigmaX] == me.table[y][sigmaX+1] && me.table[y][sigmaX] == me.table[y][sigmaX+2] )
+		return me.hasHorizontalCollisionWith( x, y, me.table[y][x] );
+	};
+
+	me.hasHorizontalCollisionWith = function( x, y, value ) {
+		var count = 0;
+		var sigmaX = x > 2 ? x-2 : 0;
+		var maxX = x+2 >= me.cols ? me.cols-1 : x+2;
+		for( sigmaX; sigmaX<=maxX; sigmaX++ ) {
+			if( ( me.table[y][sigmaX] == value ) || ( sigmaX === x ) ) {
+				count++
+			} else {
+				count = 0;
+			}
+			if( count === 3 ) {
 				return true;
+			}
 		}
 		return false
 	};
@@ -106,7 +146,7 @@ var game = function( cols, rows, elements ) {
 
 	me.init = function() {
 		me.initTable();
-		if( me.debug ) {
+		if( !me.debug ) {
 			while( true ) {
 				me.markCollisions();
 				if( me.collisions.length == 0 ) break;
@@ -200,14 +240,17 @@ var gameView = function( game ) {
 	};
 
 	me.update = function() {
+		if( game.debug ) {
+			/* Print table step by step
+			me.init();
+			*/
+		}
 		for( var x=0; x<game.cols; x++ ) {
 			for( var y=0; y<game.rows; y++ ) {
 				me.gameField.children[y].children[x].innerHTML = game.table[y][x];
 			}
 		}
 	};
-
-
 	me.init();
 };
 
