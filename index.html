@@ -30,12 +30,15 @@
 <script>
 var game = function( cols, rows, elements ) {
 	var me = this;
-	me.debug = true;
+	me.debug = false;
 	me.cols = cols;
 	me.rows = rows;
 	me.elements = elements;
 	me.table = [];
 	me.collisions = [];
+	me.needMove = false;
+	me.needCheck = false;
+	//me.isSwitched = false;
 
 	me.initTable = function() {
 		for( var y=0; y<me.rows; y++ ) {
@@ -60,47 +63,67 @@ var game = function( cols, rows, elements ) {
 		/**/
 	};
 
-	me.hasVerticalCollision = function( x, y ) {
-		return me.hasVerticalCollisionWith( x, y, me.table[y][x] );
+	me.getValue = function( x, y ) {
+		return ( x < 0 || y <0 || x >= me.cols || y >= me.rows ) ? undefined : me.table[y][x];
 	};
 
-	me.hasVerticalCollisionWith = function( x, y, value ) {
-		var count = 0;
-		var sigmaY = y > 2 ? y-2 : 0;
-		var maxY = y+2 >= me.rows ? me.rows-1 : y+2;
-		for( sigmaY; sigmaY<=maxY; sigmaY++ ) {
-			if( ( me.table[sigmaY][x] == value ) || ( sigmaY === y ) ) {
-				count++
-			} else {
-				count = 0;
-			}
-			if( count === 3 ) {
-				return true;
-			}
-		}
-		return false
+	me.setValue = function( x, y, val ) {
+		me.table[y][x] = val;
 	};
 
-
-	me.hasHorizontalCollision = function( x, y ) {
-		return me.hasHorizontalCollisionWith( x, y, me.table[y][x] );
+	me.checkCollision = function( a, b, c, d, e ) {
+		return  ( c !== undefined ) && (
+				( a === b ) && ( b === c ) ||
+				( b === c ) && ( c === d ) ||
+				( c === d ) && ( d === e ) );
 	};
 
-	me.hasHorizontalCollisionWith = function( x, y, value ) {
-		var count = 0;
-		var sigmaX = x > 2 ? x-2 : 0;
-		var maxX = x+2 >= me.cols ? me.cols-1 : x+2;
-		for( sigmaX; sigmaX<=maxX; sigmaX++ ) {
-			if( ( me.table[y][sigmaX] == value ) || ( sigmaX === x ) ) {
-				count++
-			} else {
-				count = 0;
-			}
-			if( count === 3 ) {
-				return true;
-			}
-		}
-		return false
+	me.hasCollision = function( x, y ) {
+		return me.checkCollision(
+				me.getValue( x-2, y ),
+				me.getValue( x-1, y ),
+				me.getValue( x, y ),
+				me.getValue( x+1, y ),
+				me.getValue( x+2, y )
+		) || me.checkCollision(
+				me.getValue( x, y-2 ),
+				me.getValue( x, y-1 ),
+				me.getValue( x, y ),
+				me.getValue( x, y+1 ),
+				me.getValue( x, y+2 )
+		);
+	};
+
+	me.hasCollisionWith = function( x, y, nX, nY ) {
+
+		var getReplacedValue = function( rX, rY ) {
+				if( rX === x && rY === y )
+					return me.getValue( nX, nY );
+				if( ( rX === nX ) && ( rY === nY ) )
+					return me.getValue( x, y );
+				return me.getValue( rX, rY );
+			};
+
+		return me.checkCollision(
+				getReplacedValue( x-2, y ),
+				getReplacedValue( x-1, y ),
+				getReplacedValue( x, y ),
+				getReplacedValue( x+1, y ),
+				getReplacedValue( x+2, y )
+		) || me.checkCollision(
+				getReplacedValue( x, y-2 ),
+				getReplacedValue( x, y-1 ),
+				getReplacedValue( x, y ),
+				getReplacedValue( x, y+1 ),
+				getReplacedValue( x, y+2 )
+		);
+	};
+
+	me.switchValues = function( x, y, nX, nY ) {
+		var tmp = me.getValue( x, y );
+		me.setValue( x, y, me.getValue( nX, nY ) );
+		me.setValue( nX, nY, tmp );
+		me.needCheck = true;
 	};
 
 	me.markCollisions = function() {
@@ -116,32 +139,35 @@ var game = function( cols, rows, elements ) {
 
 		for( var x=0; x<me.cols; x++ ) {
 			for( var y=0; y<me.rows; y++ ) {
-				if( me.hasVerticalCollision( x, y ) || me.hasHorizontalCollision( x, y ) ) {
+				if( me.hasCollision( x, y ) ) {
 					addCollision( x, y );
 				}
 			}
 		}
-		for( var key in me.collisions ) {
-			var cell = me.collisions[key];
-			me.table[cell.y][cell.x] = 0;
+		if( me.collisions.length ) {
+			for( var i=0; i<me.collisions.length; i++ ) {
+				me.setValue( me.collisions[i].x, me.collisions[i].y, 0 );
+			}
+			me.needMove = true;
 		}
-
-
+		me.needCheck = false;
 	};
 
 	me.moveCollisions = function() {
 		while( me.collisions.length ) {
 			var collision = me.collisions.pop();
-			if( !me.table[collision.y][collision.x] ) {
+			if( !me.getValue(collision.x,collision.y) ) {
 				for( var x=0; x<me.cols; x++ ) {
-					if( !me.table[collision.y][x] ) {
-						me.table[collision.y].splice( x, 1);
+					if( !me.getValue( x, collision.y ) ) {
+						me.table[collision.y].splice( x, 1 );
 						me.table[collision.y].push( rand( 1, elements ) );
 						x--;
 					}
 				}
 			}
 		}
+		me.needMove = false;
+		me.needCheck = true;
 	};
 
 	me.init = function() {
@@ -179,6 +205,8 @@ var cellView = {
 var gameView = function( game ) {
 	var me = this;
 	me.activeCell = null;
+	me.isBlocked = false;
+
 	me.init = function() {
 		me.gameField = document.createElement( 'div' );
 		me.gameField.className = "div-table";
@@ -221,21 +249,40 @@ var gameView = function( game ) {
 
 
 	me.cellClick = function( x, y, event){
-		if( me.activeCell == null ){
-			me.setActiveCell( x, y );
-		} else if( me.activeCell.x != undefined && me.activeCell.y != undefined ) {
-			if( me.activeCell.x == x && me.activeCell.y == y ) {
-				me.unsetActiveCell();
-			} else if( me.isSwitchableCell( x, y ) ) {
-			/*Before checking we should switch elements
-				if( game.hasHorizontalCollision( x, y ) || game.hasVerticalCollision( x, y ) ) {
-
-				}*/
-				console.log( 'check collision' );
-			} else {
-				me.unsetActiveCell();
+		if( !me.isBlocked ) {
+			if( me.activeCell == null ){
 				me.setActiveCell( x, y );
+			} else if( me.activeCell.x != undefined && me.activeCell.y != undefined ) {
+				if( me.activeCell.x == x && me.activeCell.y == y ) {
+					me.unsetActiveCell();
+				} else if( me.isSwitchableCell( x, y ) ) {
+
+					if( game.hasCollisionWith( x, y, me.activeCell.x, me.activeCell.y ) || game.hasCollisionWith( me.activeCell.x, me.activeCell.y, x, y ) ) {
+						game.switchValues( x, y, me.activeCell.x, me.activeCell.y );
+						me.update();
+						me.run();
+					} else {
+						//me.unsetActiveCell();
+					}
+					me.unsetActiveCell();
+					//console.log( 'check collision' );
+				} else {
+					me.unsetActiveCell();
+					me.setActiveCell( x, y );
+				}
 			}
+		}
+	};
+
+	me.run = function() {
+		if( game.needCheck ) {
+			game.markCollisions(); me.update();
+		} else if( game.needMove ) {
+			game.moveCollisions(); me.update();
+		}
+		me.isBlocked = game.needCheck || game.needMove;
+		if( me.isBlocked ) {
+			setTimeout( function() { me.run(); }, 500 );
 		}
 	};
 
@@ -243,11 +290,11 @@ var gameView = function( game ) {
 		if( game.debug ) {
 			/* Print table step by step
 			me.init();
-			*/
+			/**/
 		}
 		for( var x=0; x<game.cols; x++ ) {
 			for( var y=0; y<game.rows; y++ ) {
-				me.gameField.children[y].children[x].innerHTML = game.table[y][x];
+				me.gameField.children[y].children[x].innerHTML = game.table[y][x] ? game.table[y][x] : '*';
 			}
 		}
 	};
@@ -270,7 +317,7 @@ var rand = function(min, max) {
 <body>
 
 <script>
-	var gameObj = new game( 7, 3, 3 );
+	var gameObj = new game( 7, 3, 4 );
 </script>
 <button onclick="gameObj.markCollisions();gameObj.view.update()">check</button>
 <button onclick="gameObj.moveCollisions();gameObj.view.update()">move</button>
