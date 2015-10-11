@@ -28,7 +28,7 @@
 	}
 </style>
 <script>
-var game = function( cols, rows, elements ) {
+var game = function( rows, cols, elements ) {
 	var me = this;
 	me.debug = false;
 	me.cols = cols;
@@ -38,7 +38,7 @@ var game = function( cols, rows, elements ) {
 	me.collisions = [];
 	me.needMove = false;
 	me.needCheck = false;
-	//me.isSwitched = false;
+	me.isFinished = true;
 
 	me.initTable = function() {
 		for( var y=0; y<me.rows; y++ ) {
@@ -54,13 +54,23 @@ var game = function( cols, rows, elements ) {
 			[1,3,3,3,2,3,3],
 			[2,1,1,2,3,3,3]
 		];
-/
+/*
 		me.table = [
 			[2,3,2,1,2,1,2],
 			[2,2,1,3,3,1,3],
 			[2,2,2,2,2,2,2]
 		];
 		/**/
+/*
+		me.table = [
+			[1,3,2,3,2,1],
+			[1,3,4,4,1,3],
+			[4,2,1,3,2,2]
+		];
+		me.rows = me.table.length;
+		me.cols = me.table[0].length;
+		/**/
+
 	};
 
 	me.getValue = function( x, y ) {
@@ -136,11 +146,16 @@ var game = function( cols, rows, elements ) {
 			}
 		};
 		me.collisions = [];
-
+		me.isFinished = true;
 		for( var x=0; x<me.cols; x++ ) {
 			for( var y=0; y<me.rows; y++ ) {
 				if( me.hasCollision( x, y ) ) {
 					addCollision( x, y );
+					me.isFinished = false;
+				}
+				if( me.isFinished ) {
+					me.isFinished = !( me.hasCollisionWith( x, y, x+1, y ) || me.hasCollisionWith( x, y, x, y+1 ) );
+					//console.log(x + '-' + y + '-' + me.isFinished);
 				}
 			}
 		}
@@ -169,6 +184,7 @@ var game = function( cols, rows, elements ) {
 		me.needMove = false;
 		me.needCheck = true;
 	};
+
 
 	me.init = function() {
 		me.initTable();
@@ -210,13 +226,13 @@ var gameView = function( game ) {
 	me.init = function() {
 		me.gameField = document.createElement( 'div' );
 		me.gameField.className = "div-table";
-		for( var y=0; y<game.rows; y++ ) {
+		for( var x=game.cols-1; x>=0; x-- ) {
 			var row_div = document.createElement( 'div' );
 			row_div.className = "div-row";
-			for( var x=0; x<game.cols; x++ ) {
+			for( var y=0; y<game.rows; y++ ) {
 				var cell = document.createElement( 'div' );
 				cell.id = cellView.getCellId( x, y );
-				cell.innerHTML = game.table[y][x];
+				//cell.innerHTML = game.table[y][x];
 				(function( cell_x, cell_y ){
 					cell.addEventListener( 'click', function(event) { return me.cellClick( cell_x, cell_y, event ) } );
 				}(x,y));
@@ -224,7 +240,10 @@ var gameView = function( game ) {
 			}
 			me.gameField.appendChild( row_div );
 		}
+
 		document.body.appendChild( me.gameField );
+		me.update();
+		me.run();
 	};
 
 	me.setActiveCell = function( x, y ) {
@@ -284,6 +303,8 @@ var gameView = function( game ) {
 		if( me.isBlocked ) {
 			setTimeout( function() { me.run(); }, 500 );
 		}
+		if( game.isFinished )
+			alert( 'The End' );
 	};
 
 	me.update = function() {
@@ -294,7 +315,9 @@ var gameView = function( game ) {
 		}
 		for( var x=0; x<game.cols; x++ ) {
 			for( var y=0; y<game.rows; y++ ) {
-				me.gameField.children[y].children[x].innerHTML = game.table[y][x] ? game.table[y][x] : '*';
+				var val = game.getValue(x,y);
+				document.getElementById( cellView.getCellId( x, y ) ).innerHTML = val ? val : '*';
+				//me.gameField.children[y].children[x].innerHTML = val ? val : '*';
 			}
 		}
 	};
@@ -317,7 +340,7 @@ var rand = function(min, max) {
 <body>
 
 <script>
-	var gameObj = new game( 7, 3, 4 );
+	var gameObj = new game( 3, 6, 4 );
 </script>
 <button onclick="gameObj.markCollisions();gameObj.view.update()">check</button>
 <button onclick="gameObj.moveCollisions();gameObj.view.update()">move</button>
