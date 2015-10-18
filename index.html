@@ -39,6 +39,7 @@ var game = function( rows, cols, elements ) {
 	me.needMove = false;
 	me.needCheck = false;
 	me.isFinished = true;
+	me.score = 0;
 
 	me.initTable = function() {
 		for( var y=0; y<me.rows; y++ ) {
@@ -69,7 +70,7 @@ var game = function( rows, cols, elements ) {
 		];
 		me.rows = me.table.length;
 		me.cols = me.table[0].length;
-		/**/
+/**/
 
 	};
 
@@ -154,7 +155,12 @@ var game = function( rows, cols, elements ) {
 					me.isFinished = false;
 				}
 				if( me.isFinished ) {
-					me.isFinished = !( me.hasCollisionWith( x, y, x+1, y ) || me.hasCollisionWith( x, y, x, y+1 ) );
+					me.isFinished = !(
+						me.hasCollisionWith( x, y, x+1, y ) ||
+						me.hasCollisionWith( x+1, y, x, y ) ||
+						me.hasCollisionWith( x, y, x, y+1 ) ||
+						me.hasCollisionWith( x, y+1, x, y )
+					);
 					//console.log(x + '-' + y + '-' + me.isFinished);
 				}
 			}
@@ -163,6 +169,7 @@ var game = function( rows, cols, elements ) {
 			for( var i=0; i<me.collisions.length; i++ ) {
 				me.setValue( me.collisions[i].x, me.collisions[i].y, 0 );
 			}
+			me.score += me.collisions.length;
 			me.needMove = true;
 		}
 		me.needCheck = false;
@@ -194,6 +201,7 @@ var game = function( rows, cols, elements ) {
 				if( me.collisions.length == 0 ) break;
 				me.moveCollisions();
 			}
+			me.score = 0;
 		}
 		me.view = new gameView(me);
 	};
@@ -240,7 +248,6 @@ var gameView = function( game ) {
 			}
 			me.gameField.appendChild( row_div );
 		}
-
 		document.body.appendChild( me.gameField );
 		me.update();
 		me.run();
@@ -320,6 +327,7 @@ var gameView = function( game ) {
 				//me.gameField.children[y].children[x].innerHTML = val ? val : '*';
 			}
 		}
+		document.getElementById( 'score').innerHTML = game.score;
 	};
 	me.init();
 };
@@ -338,12 +346,13 @@ var rand = function(min, max) {
 </script>
 </head>
 <body>
-
+<div>Score:<span id="score"></span></div>
 <script>
-	var gameObj = new game( 3, 6, 4 );
+	var gameObj = new game( 8, 8, 4 );
 </script>
+<!--
 <button onclick="gameObj.markCollisions();gameObj.view.update()">check</button>
 <button onclick="gameObj.moveCollisions();gameObj.view.update()">move</button>
-
+-->
 </body>
 </html>
